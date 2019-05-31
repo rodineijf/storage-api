@@ -33,7 +33,7 @@ router.get("/:id", async (req, res) => {
 function uploadMiddleware(req: Request, res: Response, next: NextFunction) {
   upload.single("file")(req, res, err => {
     if (err) {
-      res.send({ error: err.message });
+      res.status(400).send({ error: err.message });
     } else {
       next();
     }
@@ -47,6 +47,24 @@ router.post("/", uploadMiddleware, async (req, res) => {
   } catch (error) {
     logger.error("error at /POST storage", error);
     res.sendStatus(500);
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  if (!ObjectID.isValid(req.params.id)) {
+    res.status(400).send({ error: Errors.InvalidIdentifier });
+    return;
+  }
+  try {
+    await storageService.remove(req.params.id);
+    res.sendStatus(200);
+  } catch (error) {
+    if (error.code === Errors.FileNotFound) {
+      res.status(404).send({ error: Errors.FileNotFound });
+    } else {
+      logger.error("error at /DELETE storage", error);
+      res.sendStatus(500);
+    }
   }
 });
 

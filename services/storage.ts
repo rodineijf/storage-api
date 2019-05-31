@@ -55,6 +55,7 @@ function download(
 
       if (!data) {
         reject({ code: Errors.FileNotFound });
+        return;
       }
 
       const stream = bucket.openDownloadStream(new ObjectID(id));
@@ -69,7 +70,38 @@ function download(
   });
 }
 
+function remove(id: string) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const client = new MongoClient(process.env.MONGO_URI!);
+      await client.connect();
+      const db = client.db(process.env.DB_NAME);
+      const bucket = new GridFSBucket(db);
+
+      const data = await db
+        .collection("fs.files")
+        .findOne({ _id: new ObjectID(id) });
+
+      if (!data) {
+        reject({ code: Errors.FileNotFound });
+        return;
+      }
+
+      bucket.delete(new ObjectID(id), err => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
 export default {
   download,
+  remove,
   upload,
 };
